@@ -1,0 +1,126 @@
+name: Security Pipeline
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: Gitleaks - segredos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Identificar execucao
+        run: |
+          date -u +%Y-%m-%dT%H:%M:%SZ
+          echo "$GITHUB_REPOSITORY / $GITHUB_ACTOR / $GITHUB_REF / $GITHUB_SHA"
+      - name: Instalar Gitleaks oficial e verificar SHA-256
+        env:
+          VERSION: 8.24.2
+        run: |
+          mkdir -p "$RUNNER_TEMP/gitleaks" reports
+          cd "$RUNNER_TEMP/gitleaks"
+          curl -fsSL --retry 3 -O "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 -O "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "gitleaks_${VERSION}_checksums.txt"
+          tar -xzf "gitleaks_${VERSION}_linux_x64.tar.gz" gitleaks
+          echo "$RUNNER_TEMP/gitleaks" >> "$GITHUB_PATH"
+      - name: Barrar segredos no historico da branch
+        run: |
+          gitleaks version
+          gitleaks git . --log-opts=HEAD --redact=100 --verbose --exit-code=1 --report-format=json --report-path=reports/gitleaks.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitleaks-${{ github.run_id }}
+          path: reports/gitleaks.json
+          retention-days: 90
+
+  semgrep:
+    name: Semgrep - codigo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Identificar execucao
+        run: |
+          date -u +%Y-%m-%dT%H:%M:%SZ
+          echo "$GITHUB_REPOSITORY / $GITHUB_ACTOR / $GITHUB_REF / $GITHUB_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar Semgrep oficial
+        run: python -m pip install semgrep==1.101.0
+      - name: Barrar eval com analise estatica
+        run: |
+          mkdir -p reports
+          semgrep --version
+          set +e
+          semgrep scan --config .semgrep.yml --error --strict --metrics=off --json --output reports/semgrep.json .
+          status=$?
+          cat reports/semgrep.json
+          exit "$status"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-${{ github.run_id }}
+          path: reports/semgrep.json
+          retention-days: 90
+
+  trivy:
+    name: Trivy - imagem Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Identificar execucao
+        run: |
+          date -u +%Y-%m-%dT%H:%M:%SZ
+          echo "$GITHUB_REPOSITORY / $GITHUB_ACTOR / $GITHUB_REF / $GITHUB_SHA"
+      - name: Construir imagem e testar HTTP
+        run: |
+          mkdir -p reports
+          docker build --pull -t "cp05:${GITHUB_SHA}" .
+          docker image inspect "cp05:${GITHUB_SHA}" > reports/image-inspect.json
+          docker run --detach --name cp05-site -p 8080:80 "cp05:${GITHUB_SHA}"
+          trap 'docker rm -f cp05-site' EXIT
+          curl --fail --retry 10 --retry-delay 1 --retry-connrefused http://localhost:8080/ -o reports/site.html
+          grep -q 'CP05 - DevSecOps FIAP' reports/site.html
+          echo "SMOKE TEST HTTP: PASS"
+      - name: Instalar Trivy oficial e verificar SHA-256
+        env:
+          VERSION: 0.69.3
+        run: |
+          mkdir -p "$RUNNER_TEMP/trivy"
+          cd "$RUNNER_TEMP/trivy"
+          curl -fsSL --retry 3 -O "https://github.com/aquasecurity/trivy/releases/download/v${VERSION}/trivy_${VERSION}_Linux-64bit.tar.gz"
+          curl -fsSL --retry 3 -O "https://github.com/aquasecurity/trivy/releases/download/v${VERSION}/trivy_${VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "trivy_${VERSION}_checksums.txt"
+          tar -xzf "trivy_${VERSION}_Linux-64bit.tar.gz" trivy
+          echo "$RUNNER_TEMP/trivy" >> "$GITHUB_PATH"
+      - name: Barrar CVEs CRITICAL
+        run: |
+          trivy --version
+          set +e
+          trivy image --scanners vuln --severity CRITICAL --exit-code 1 --format json --output reports/trivy.json "cp05:${GITHUB_SHA}"
+          status=$?
+          trivy convert --format table reports/trivy.json
+          exit "$status"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-${{ github.run_id }}
+          path: reports/
+          retention-days: 90
