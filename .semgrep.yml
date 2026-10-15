@@ -1,0 +1,9 @@
+rules:
+  - id: cp05-no-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: "eval() executa texto como codigo. Use conversao e validacao explicitas."
+    pattern: eval(...)
+    metadata:
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      category: security

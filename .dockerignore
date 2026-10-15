@@ -1,0 +1,7 @@
+.git
+.github
+evidence
+*.pdf
+*.json
+README.md
+.semgrep.yml

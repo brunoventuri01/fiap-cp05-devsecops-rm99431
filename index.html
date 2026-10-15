@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CP05 - DevSecOps FIAP</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#101522;color:#edf2f7;font:17px/1.6 system-ui,sans-serif}
+    main{max-width:880px;margin:65px auto;padding:28px}h1{font-size:44px;line-height:1.15;margin:12px 0 22px}
+    .tag{color:#fb5b94;letter-spacing:2px;font-size:13px;font-weight:bold}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:32px 0}
+    article,form{background:#1c2435;border:1px solid #33405a;border-radius:16px;padding:22px}h2{font-size:20px;margin:0 0 8px}
+    p{color:#b7c4d8}label{display:block;margin:14px 0 5px}input,button{font:inherit;padding:10px;border-radius:8px;border:1px solid #536480}
+    input{width:100%;background:#101522;color:white}button{margin-top:20px;background:#fb5b94;color:#101522;cursor:pointer;font-weight:bold}
+    output{display:block;margin-top:18px;font-weight:bold}footer{margin-top:28px;color:#aebcd1;font-size:14px}
+    @media(max-width:650px){main{margin:20px auto}.cards{grid-template-columns:1fr}h1{font-size:34px}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="tag">FIAP / ENGENHARIA DE SOFTWARE / CP05</div>
+  <h1>Seguranca em cada commit.</h1>
+  <p>Site de demonstracao do pipeline DevSecOps. O GitHub Actions verifica segredos, analisa o codigo e inspeciona a imagem Docker.</p>
+  <section class="cards" aria-label="Barreiras de seguranca">
+    <article><h2>Gitleaks</h2><p>Procura credenciais no historico dos commits.</p></article>
+    <article><h2>Semgrep</h2><p>Identifica chamadas perigosas a eval().</p></article>
+    <article><h2>Trivy</h2><p>Bloqueia imagens com vulnerabilidades criticas conhecidas.</p></article>
+  </section>
+  <form>
+    <h2>Calculadora segura</h2>
+    <label for="valor">Valor unitario (R$)</label><input id="valor" type="number" min="0" step="0.01" value="100" required>
+    <label for="quantidade">Quantidade</label><input id="quantidade" type="number" min="1" step="1" value="2" required>
+    <button type="submit">Calcular total</button>
+    <output aria-live="polite">Preencha os valores e clique em calcular.</output>
+  </form>
+  <footer>Bruno Venturi Lopes Vieira - RM 99431</footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
