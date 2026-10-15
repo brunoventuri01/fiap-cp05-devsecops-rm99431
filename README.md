@@ -30,6 +30,19 @@ As branches de prova partem da main limpa e nao sao mescladas:
 
 A main permanece sem as sabotagens e deve ter os tres jobs aprovados. Manter as provas fora da main preserva o historico limpo sem apagar evidencias nem enfraquecer o scanner. Remover um segredo real apenas do arquivo nao o retira do historico: exige revogar a credencial e tratar o incidente.
 
+## Evidencias reais - 14/10/2026 (America/Sao_Paulo)
+
+| Execucao | Branch | Resultado observado | Link |
+| --- | --- | --- | --- |
+| #2 | main | Os tres jobs aprovados | [Actions #2](https://github.com/brunoventuri01/fiap-cp05-devsecops-rm99431/actions/runs/38664270612) |
+| #3 | prova-gitleaks | 1 segredo falso, generic-api-key, segredo-falso.env:2, exit 1 | [Actions #3](https://github.com/brunoventuri01/fiap-cp05-devsecops-rm99431/actions/runs/38664309428) |
+| #4 | prova-semgrep | 1 achado cp05-no-eval, calculadora-vulneravel.js:4, exit 1 | [Actions #4](https://github.com/brunoventuri01/fiap-cp05-devsecops-rm99431/actions/runs/38664372164) |
+| #5 | prova-trivy | 42 achados CRITICAL em nginx:1.20.0 / Debian 10.9, exit 1 | [Actions #5](https://github.com/brunoventuri01/fiap-cp05-devsecops-rm99431/actions/runs/38664423596) |
+
+As execucoes #3, #4 e #5 falharam exclusivamente no scanner sabotado. Os outros dois jobs passaram em cada prova. Exemplos do Trivy: CVE-2022-32221 (curl), CVE-2021-3711 (OpenSSL) e CVE-2022-37434 (zlib). O total 42 conta achados por pacote, nao necessariamente 42 CVEs unicos.
+
+A execucao #1 foi uma tentativa inicial com falhas de ambiente (dependencia pkg_resources e inicializacao HTTP). A execucao #2 resolveu essas falhas com setuptools fixado e tentativas HTTP limitadas. A #1 nao e usada como evidencia de deteccao de vulnerabilidades. Os avisos de Node.js 20 nas Actions nao impediram as execucoes, pois o runner as executou com Node.js 24.
+
 ## Reproducao pelo navegador
 
 1. Abra Actions > Security Pipeline para consultar os resultados e artifacts.
